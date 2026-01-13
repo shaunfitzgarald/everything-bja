@@ -1,4 +1,5 @@
 import { Container, Box, Typography, Button, Grid, Avatar, Skeleton } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import SEOManager from '../components/SEOManager';
 import SectionHeader from '../components/SectionHeader';
 import FeaturedBanner from '../components/FeaturedBanner';
@@ -84,7 +85,12 @@ const Home = () => {
             )}
             
             <Box sx={{ mt: 4, textAlign: 'center' }}>
-              <Button variant="text" sx={{ fontWeight: 800, fontSize: '1.1rem' }}>
+              <Button 
+                component={RouterLink} 
+                to="/social" 
+                variant="text" 
+                sx={{ fontWeight: 800, fontSize: '1.1rem' }}
+              >
                 View All Social Links →
               </Button>
             </Box>

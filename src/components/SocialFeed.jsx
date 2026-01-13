@@ -33,7 +33,7 @@ const SocialFeed = ({ type, url }) => {
           cite={`https://www.tiktok.com/@${username}`} 
           data-unique-id={username} 
           data-embed-type="creator" 
-          style={{ maxWidth: '100%', minWidth: '325px' }}
+          style={{ maxWidth: '100%', minWidth: '325px', height: '100%' }}
         >
           <section>
             <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} />
