@@ -7,60 +7,96 @@ import { ShoppingBag } from 'lucide-react';
 const Shop = () => {
   const { data: config, loading } = useSiteConfig();
 
-  if (loading) return <Container sx={{ py: 10 }}><Skeleton variant="rectangular" height={600} sx={{ borderRadius: 6 }} /></Container>;
+  if (loading) return (
+    <Container maxWidth="lg" sx={{ py: 10 }}>
+      <Skeleton variant="rectangular" height={800} sx={{ borderRadius: 4 }} />
+    </Container>
+  );
 
-  const isIframeMode = config.shopMode === 'iframe';
+  const shopUrl = config.shopUrl || 'https://bjastore.com';
+  // Default to iframe unless specifically set to redirect
+  const isIframeMode = config.shopMode !== 'redirect';
 
   return (
-    <Container maxWidth="lg" sx={{ py: 8 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <SEOManager title="Shop" description="Official Brian Jordan Alvarez merchandise." />
-      <SectionHeader title="The Shop" subtitle="Wear the energy. official Everything BJA merch." />
+      
+      <Box sx={{ 
+        bgcolor: 'background.paper', 
+        pt: { xs: 8, md: 10 }, 
+        pb: { xs: 4, md: 6 },
+        textAlign: 'center',
+        background: 'linear-gradient(to bottom, rgba(255, 20, 147, 0.05), transparent)'
+      }}>
+        <Container maxWidth="md">
+          <SectionHeader title="The Shop" subtitle="Official Everything BJA Merch" />
+        </Container>
+      </Box>
 
-      {isIframeMode ? (
-        <Box sx={{ 
-          width: '100%', 
-          height: '80vh', 
-          borderRadius: 6, 
-          overflow: 'hidden', 
-          boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
-          bgcolor: 'white',
-          position: 'relative'
-        }}>
-          <iframe 
-            src={config.shopUrl} 
-            title="BJA Store" 
-            style={{ width: '100%', height: '100%', border: 'none' }}
-            loading="lazy"
-          />
-          <Box sx={{ position: 'absolute', bottom: 20, right: 20, zIndex: 10 }}>
+      <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 }, pb: 8 }}>
+        {isIframeMode ? (
+          <Box sx={{ 
+            width: '100%', 
+            height: '1000px', // Taller for better browsing
+            borderRadius: 4, 
+            overflow: 'hidden', 
+            boxShadow: '0 24px 80px rgba(0,0,0,0.12)',
+            bgcolor: 'white',
+            position: 'relative',
+            border: '1px solid',
+            borderColor: 'divider'
+          }}>
+            <iframe 
+              src={shopUrl} 
+              title="BJA Store" 
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              loading="lazy"
+            />
+            {/* Overlay Button for Mobile or convenience */}
+            <Box sx={{ position: 'absolute', bottom: 30, right: 30, zIndex: 10 }}>
+               <Button 
+                 variant="contained" 
+                 href={shopUrl} 
+                 target="_blank"
+                 startIcon={<ShoppingBag />}
+                 sx={{ 
+                   borderRadius: 100, 
+                   px: 4, 
+                   py: 1.5,
+                   boxShadow: '0 8px 32px rgba(255, 20, 147, 0.4)',
+                   '&:hover': { transform: 'scale(1.05)' }
+                 }}
+               >
+                 Open in New Tab
+               </Button>
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 12, 
+            px: 4,
+            bgcolor: 'background.paper', 
+            borderRadius: 6, 
+            boxShadow: '0 12px 40px rgba(0,0,0,0.05)'
+          }}>
+             <Typography variant="h3" sx={{ fontWeight: 900, mb: 3 }}>Redirecting to Store...</Typography>
+             <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
+               We're taking you to the official Everything BJA store.
+             </Typography>
              <Button 
                variant="contained" 
-               href={config.shopUrl} 
+               size="large" 
+               href={shopUrl} 
                target="_blank"
-               startIcon={<ShoppingBag />}
+               sx={{ borderRadius: 100, px: 8, py: 2, fontSize: '1.2rem' }}
              >
-               Open in New Tab
+               Go to BJA Store
              </Button>
           </Box>
-        </Box>
-      ) : (
-        <Box sx={{ textAlign: 'center', py: 10, bgcolor: 'background.paper', borderRadius: 8, border: '2px dashed', borderColor: 'primary.main' }}>
-           <Typography variant="h3" sx={{ fontWeight: 900, mb: 3 }}>Redirecting to Store...</Typography>
-           <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
-             We're taking you to the official Everything BJA store. If you aren't redirected automatically, click the button below.
-           </Typography>
-           <Button 
-             variant="contained" 
-             size="large" 
-             href={config.shopUrl || 'https://bjastore.com'} 
-             target="_blank"
-             sx={{ px: 6, py: 2, fontSize: '1.2rem' }}
-           >
-             Go to BJA Store
-           </Button>
-        </Box>
-      )}
-    </Container>
+        )}
+      </Container>
+    </Box>
   );
 };
 
