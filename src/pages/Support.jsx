@@ -5,7 +5,7 @@ import { Heart, Send } from 'lucide-react';
 
 const Support = () => {
   const supportOptions = [
-    { title: 'Venmo', handle: '@Brian-Jordan-Alvarez', url: 'https://venmo.com/Brian-Jordan-Alvarez', color: '#3d95ce' },
+    { title: 'Venmo', handle: '@BrianJordanAlvarez', url: 'https://venmo.com/u/BrianJordanAlvarez', color: '#3d95ce' },
     { title: 'PayPal', handle: 'Donate via PayPal', url: 'https://paypal.me/bja', color: '#003087' },
   ];
 

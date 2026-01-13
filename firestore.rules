@@ -1,26 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public read access for everything
-    match /{document=**} {
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/admin/allowlist) &&
+        (request.auth.token.email.lower() in get(/databases/$(database)/documents/admin/allowlist).data.emails ||
+         request.auth.token.email in get(/databases/$(database)/documents/admin/allowlist).data.emails);
+    }
+
+    // Public read access for most collections
+    match /links/{document=**} {
       allow read: if true;
+      allow write: if isAdmin();
     }
     
-    // Auth-only write access for admin content
-    match /config/{document=**} {
-      allow write: if request.auth != null && get(/databases/$(database)/documents/admin/allowlist).data.emails.hasAny([request.auth.token.email]);
+    match /videos/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
-    match /links/{document=**} {
-      allow write: if request.auth != null && get(/databases/$(database)/documents/admin/allowlist).data.emails.hasAny([request.auth.token.email]);
-    }
+    
     match /credits/{document=**} {
-      allow write: if request.auth != null && get(/databases/$(database)/documents/admin/allowlist).data.emails.hasAny([request.auth.token.email]);
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Admin allowlist - allow ANYONE to read for debugging
+    match /admin/allowlist {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     
     // Public write access for contact form
     match /contacts/{document=**} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/admin/allowlist).data.emails.hasAny([request.auth.token.email]);
+      allow read, update, delete: if isAdmin();
     }
   }
 }

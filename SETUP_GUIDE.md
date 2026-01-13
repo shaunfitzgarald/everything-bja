@@ -11,6 +11,7 @@ This guide will help you finalize the setup for the "Everything BJA" website usi
 5.  **Enable Authentication**: 
     - Go to Build > Authentication.
     - Enable **Google** sign-in.
+    - Enable **Email/Password** sign-in (if you want to login without a Google account).
 6.  **Enable Firestore**:
     - Go to Build > Firestore Database.
     - Create a database in **Production Mode** (or test mode, but our rules will secure it).
