@@ -16,7 +16,7 @@ const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
-    { role: 'model', text: "I love you and I am so happy you're here. I'm BrianBot (the AI version with similar energy). What's on your mind?" }
+    { role: 'model', text: "I love you, and I'm so happy you're here! I'm BrianBot (the AI version with similar energy). What's on your mind?" }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
