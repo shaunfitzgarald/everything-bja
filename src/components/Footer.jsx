@@ -19,7 +19,7 @@ const Footer = () => {
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">
-              The official corner of the internet for Brian Jordan Alvarez. Stay fabulous.
+              The official corner of the internet for Brian Jordan Alvarez. I love you.
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
