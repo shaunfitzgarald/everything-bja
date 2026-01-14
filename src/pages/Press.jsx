@@ -21,13 +21,41 @@ const Press = () => {
       </Paper>
 
       <Typography variant="h5" sx={{ fontWeight: 800, mb: 4 }}>Media Assets</Typography>
-      <Grid container spacing={3}>
-        {[1, 2, 3].map((i) => (
-          <Grid item xs={12} sm={4} key={i}>
-            <Box sx={{ width: '100%', pt: '100%', position: 'relative', borderRadius: 4, overflow: 'hidden', bgcolor: 'grey.200', mb: 1 }}>
-               <Typography sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'grey.500' }}>Photo {i}</Typography>
+      <Grid container spacing={4}>
+        {[
+          { id: 1, name: 'Main Portrait', file: 'brian1.jpg' },
+          { id: 2, name: 'Character Study', file: 'brian2.jpg' },
+          { id: 3, name: 'Action Shot', file: 'brian3.jpg' }
+        ].map((photo) => (
+          <Grid size={{ xs: 12, sm: 4 }} key={photo.id}>
+            <Box sx={{ 
+              width: '100%', 
+              pt: '125%', 
+              position: 'relative', 
+              borderRadius: 6, 
+              overflow: 'hidden', 
+              bgcolor: 'background.paper', 
+              mb: 2,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}>
+               <img 
+                 src={`/assets/${photo.file}`} 
+                 alt={photo.name}
+                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+               />
             </Box>
-            <Button fullWidth startIcon={<Download size={16} />}>High Res</Button>
+            <Button 
+              fullWidth 
+              variant="outlined"
+              href={`/assets/${photo.file}`}
+              download={photo.file}
+              startIcon={<Download size={18} />}
+              sx={{ borderRadius: 4, fontWeight: 700 }}
+            >
+              High Res
+            </Button>
           </Grid>
         ))}
       </Grid>

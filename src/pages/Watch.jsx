@@ -50,7 +50,7 @@ const Watch = () => {
         <Button 
           variant="contained" 
           size="large"
-          href="https://www.youtube.com/user/BrianJordanAlvarez" 
+          href="https://www.youtube.com/@BrianJordanAlvarez" 
           target="_blank"
           sx={{ borderRadius: 100, px: 6, py: 2 }}
         >

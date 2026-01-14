@@ -11,8 +11,8 @@ const SEOManager = ({
   const fullTitle = title ? `${title} | ${siteName}` : siteName;
   const defaultDesc = "The official hub for Brian Jordan Alvarez. Links, merch, credits, and more.";
   const finalDesc = description || defaultDesc;
-  const finalUrl = `https://everythingbja.com${url || ''}`;
-  const finalImage = image || "https://everythingbja.com/og-image.jpg";
+  const finalUrl = `https://everything-bja.web.app${url || ''}`;
+  const finalImage = image || "https://everything-bja.web.app/og-image.jpg";
 
   return (
     <Helmet>
@@ -28,7 +28,7 @@ const SEOManager = ({
       <meta property="og:description" content={finalDesc} />
       <meta property="og:image" content={finalImage} />
 
-      {/* Twitter */}
+      {/* X (Twitter) */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={finalUrl} />
       <meta name="twitter:title" content={fullTitle} />
@@ -41,7 +41,7 @@ const SEOManager = ({
           "@context": "https://schema.org",
           "@type": "WebSite",
           "name": siteName,
-          "url": "https://everythingbja.com"
+          "url": "https://everything-bja.web.app"
         })}
       </script>
 
@@ -51,7 +51,7 @@ const SEOManager = ({
             "@context": "https://schema.org",
             "@type": "Person",
             "name": "Brian Jordan Alvarez",
-            "url": "https://everythingbja.com",
+            "url": "https://everything-bja.web.app",
             "sameAs": [
               "https://www.instagram.com/brianjordanalvarez",
               "https://www.tiktok.com/@brianjordanalvarez",
