@@ -24,9 +24,12 @@ const Navbar = () => {
 
   const drawer = (
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center', p: 2 }}>
-      <Typography variant="h6" sx={{ my: 2, fontWeight: 800, color: 'primary.main' }}>
-        Everything BJA
-      </Typography>
+      <Box sx={{ my: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+        <img src="/assets/logo.png" alt="Everything BJA Logo" style={{ height: '32px' }} />
+        <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+          Everything BJA
+        </Typography>
+      </Box>
       <List>
         {navItems.map((item) => (
           <ListItem key={item.path} disablePadding>
@@ -60,7 +63,19 @@ const Navbar = () => {
               alignItems: 'center'
             }}
           >
-            Everything BJA <Box component="span" sx={{ ml: 1, fontSize: '0.8rem', bgcolor: 'primary.main', color: 'white', px: 1, py: 0.2, borderRadius: 1 }}>VERIFIED</Box>
+            <Box 
+              component="img" 
+              src="/assets/logo.png" 
+              alt="Everything BJA Logo" 
+              sx={{ 
+                height: { xs: '24px', md: '32px' }, 
+                mr: 1.5,
+                transition: 'transform 0.3s ease',
+                '&:hover': { transform: 'scale(1.1)' }
+              }} 
+            />
+            Everything BJA
+            <Box component="span" sx={{ ml: 1.5, fontSize: '0.8rem', bgcolor: 'primary.main', color: 'white', px: 1, py: 0.2, borderRadius: 1, fontWeight: 800 }}>VERIFIED</Box>
           </Typography>
 
           {isMobile ? (

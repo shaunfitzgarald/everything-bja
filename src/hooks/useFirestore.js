@@ -21,7 +21,7 @@ export const useSiteConfig = () => {
           shopMode: "link",
           shopUrl: "https://bjastore.com",
           cameoUrl: "https://www.cameo.com/brianjordanalvarez",
-          letterboxdUrl: "https://letterboxd.com/actor/brianjordanalvarez",
+          letterboxdUrl: "https://letterboxd.com/actor/brian-jordan-alvarez/",
           featuredVideo: "https://www.youtube.com/embed/RtHC29merkU?si" // FX's English Teacher Trailer
         });
       }
@@ -37,7 +37,7 @@ export const useSiteConfig = () => {
         shopMode: "link",
         shopUrl: "https://bjastore.com",
         cameoUrl: "https://www.cameo.com/brianjordanalvarez",
-        letterboxdUrl: "https://letterboxd.com/actor/brianjordanalvarez",
+        letterboxdUrl: "https://letterboxd.com/actor/brian-jordan-alvarez/",
         featuredVideo: "https://www.youtube.com/embed/RtHC29merkU?si" // FX's English Teacher Trailer
       });
     });

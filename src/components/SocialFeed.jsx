@@ -27,16 +27,28 @@ const SocialFeed = ({ type, url }) => {
     // TikTok Username format for profile embed
     const username = url.split('@')[1]?.split('/')[0] || 'brianjordanalvarez';
     return (
-      <Box sx={{ width: '100%', minHeight: 700, overflow: 'hidden', borderRadius: 8, bgcolor: 'background.paper', p: 1, boxShadow: '0 20px 40px rgba(0,0,0,0.1)', border: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ 
+        width: '100%', 
+        minHeight: 800, 
+        overflow: 'hidden', 
+        borderRadius: 8, 
+        bgcolor: '#ffffff', // Force white for consistency with social embeds
+        boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
+        border: '1px solid', 
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
         <blockquote 
           className="tiktok-embed" 
           cite={`https://www.tiktok.com/@${username}`} 
           data-unique-id={username} 
           data-embed-type="creator" 
-          style={{ maxWidth: '100%', minWidth: '325px', height: '100%' }}
+          style={{ width: '100%', height: '100%', margin: 0 }}
         >
-          <section>
-            <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} />
+          <section style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
+            <CircularProgress />
           </section>
         </blockquote>
       </Box>
@@ -45,16 +57,28 @@ const SocialFeed = ({ type, url }) => {
 
   if (type === 'instagram') {
     return (
-      <Box sx={{ width: '100%', minHeight: 700, overflow: 'hidden', borderRadius: 8, bgcolor: 'background.paper', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', border: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ 
+        width: '100%', 
+        minHeight: 800, 
+        overflow: 'hidden', 
+        borderRadius: 8, 
+        bgcolor: '#ffffff',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
+        border: '1px solid', 
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
         <iframe
           src={`${url}embed`}
           width="100%"
-          height="700"
+          height="800"
           frameBorder="0"
           scrolling="no"
           allowtransparency="true"
           title="Instagram Feed"
-          style={{ border: 'none', borderRadius: '32px' }}
+          style={{ border: 'none' }}
         />
       </Box>
     );
