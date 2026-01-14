@@ -20,7 +20,7 @@ const Home = () => {
     { label: 'YouTube', icon: <Youtube size={20} />, url: 'https://www.youtube.com/@BrianJordanAlvarez' },
     { label: 'Letterboxd', icon: <Clapperboard size={18} />, url: config.letterboxdUrl || 'https://letterboxd.com/actor/brian-jordan-alvarez/' },
     { label: 'IMDb', icon: <Clapperboard size={18} />, url: "https://www.imdb.com/name/nm2755723/" },
-    { label: 'Twitter', icon: <Twitter size={20} />, url: 'https://twitter.com/brianjoralvarez' },
+    { icon: <Twitter size={20} />, label: 'X', url: 'https://x.com/brianjoralvarez', color: '#1DA1F2' },
     { label: 'Cameo', icon: <Clapperboard size={18} />, url: config.cameoUrl || 'https://www.cameo.com/brianjordanalvarez' },
     { label: 'Venmo', icon: <ShoppingBag size={18} />, url: 'https://venmo.com/u/brianjordanalvarez' },
   ];

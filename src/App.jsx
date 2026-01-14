@@ -17,6 +17,7 @@ import NotFound from './pages/NotFound';
 // Layout components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ChatBot from './components/ChatBot';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
         </Routes>
       </Box>
       <Footer />
+      <ChatBot />
     </Box>
   );
 }

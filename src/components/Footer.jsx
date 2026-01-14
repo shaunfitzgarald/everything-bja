@@ -53,7 +53,7 @@ const Footer = () => {
               <IconButton component="a" href="https://www.imdb.com/name/nm2755723/" target="_blank" color="inherit" size="small">
                 <Clapperboard size={20} />
               </IconButton>
-              <IconButton component="a" href="https://twitter.com/brianjoralvarez" target="_blank" color="inherit" size="small">
+              <IconButton component="a" href="https://x.com/brianjoralvarez" target="_blank" color="inherit" size="small" aria-label="X">
                 <Twitter size={20} />
               </IconButton>
             </Box>
