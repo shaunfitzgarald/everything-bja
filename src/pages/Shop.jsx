@@ -29,7 +29,7 @@ const Shop = () => {
         background: 'linear-gradient(to bottom, rgba(255, 20, 147, 0.05), transparent)'
       }}>
         <Container maxWidth="md">
-          <SectionHeader title="The Shop" subtitle="Official Everything BJA Merch" />
+          <SectionHeader title="The Shop" subtitle="Official BJA Merch" />
         </Container>
       </Box>
 
@@ -82,7 +82,7 @@ const Shop = () => {
           }}>
              <Typography variant="h3" sx={{ fontWeight: 900, mb: 3 }}>Redirecting to Store...</Typography>
              <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
-               We're taking you to the official Everything BJA store.
+               We're taking you to the official BJA store.
              </Typography>
              <Button 
                variant="contained" 

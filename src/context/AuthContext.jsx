@@ -53,7 +53,16 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    return unsubscribe;
+    // Safety timeout: if auth hasn't resolved in 5 seconds, stop loading
+    // This prevents the "blank screen" hang if Firebase is being weird on navigation
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const checkAdmin = async () => {

@@ -12,7 +12,10 @@ import {
 } from '@mui/material';
 import { MessageCircle, Send, X } from 'lucide-react';
 
+import { useSiteConfig } from '../hooks/useFirestore';
+
 const ChatBot = () => {
+  const { data: config } = useSiteConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
@@ -82,6 +85,9 @@ const ChatBot = () => {
       setIsLoading(false);
     }
   };
+  if (config && config.brianBotEnabled === false) {
+    return null;
+  }
 
   return (
     <>

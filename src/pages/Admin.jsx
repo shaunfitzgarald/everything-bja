@@ -1,10 +1,10 @@
-import { Container, Typography, Box, Button, TextField, Grid, Paper, Table, TableBody, TableCell, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel, Divider } from '@mui/material';
+import { Container, Typography, Box, Button, TextField, Grid, Paper, Table, TableBody, TableCell, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel, Divider, CircularProgress } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useFirestoreCollection, useSiteConfig } from '../hooks/useFirestore';
+import { useFirestoreCollection, useSiteConfig, DEFAULT_CONFIG } from '../hooks/useFirestore';
 import { db } from '../firebase/config';
-import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
 import { LogIn, Plus, Edit, Trash2, Save, RefreshCw } from 'lucide-react';
 import { fetchTmdbCredits } from '../services/tmdb.service';
 
@@ -14,6 +14,7 @@ const Admin = () => {
   const { data: links, loading: linksLoading } = useFirestoreCollection('links');
   const { data: videos, loading: videosLoading } = useFirestoreCollection('videos');
   const { data: credits, loading: creditsLoading } = useFirestoreCollection('credits');
+  const { data: pressPhotos, loading: pressPhotosLoading } = useFirestoreCollection('press_photos');
   const { data: config, loading: configLoading } = useSiteConfig();
 
   const [editLink, setEditLink] = useState(null);
@@ -25,6 +26,8 @@ const Admin = () => {
   const [authError, setAuthError] = useState('');
   const [tmdbId, setTmdbId] = useState('1071699'); // Default for BJA on TMDb
   const [tmdbKey, setTmdbKey] = useState('');
+  const [openPressDialog, setOpenPressDialog] = useState(false);
+  const [editPressPhoto, setEditPressPhoto] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
   if (authLoading) return <Container sx={{ py: 10 }}><Typography>Loading auth...</Typography></Container>;
@@ -171,10 +174,40 @@ const Admin = () => {
       cameoUrl: formData.get('cameoUrl'),
       letterboxdUrl: formData.get('letterboxdUrl'),
       featuredVideo: formData.get('featuredVideo'),
-      shopMode: formData.get('shopMode')
+      shopMode: formData.get('shopMode'),
+      brianBotEnabled: formData.get('brianBotEnabled') === 'on',
+      themeColor: formData.get('themeColor'),
+      heroImage: formData.get('heroImage') || DEFAULT_CONFIG.heroImage,
+      bioPdfUrl: formData.get('bioPdfUrl')
     };
-    await updateDoc(doc(db, 'config', 'site'), newConfig);
+    
+    // Use setDoc with merge: true to create the document if it doesn't exist
+    await setDoc(doc(db, 'config', 'site'), newConfig, { merge: true });
     alert("Site config updated!");
+  };
+
+  const handleSavePressPhoto = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const photoData = {
+      name: formData.get('name'),
+      url: formData.get('url'),
+      priority: parseInt(formData.get('priority')) || 0
+    };
+
+    if (editPressPhoto?.id) {
+      await updateDoc(doc(db, 'press_photos', editPressPhoto.id), photoData);
+    } else {
+      await addDoc(collection(db, 'press_photos'), photoData);
+    }
+    setOpenPressDialog(false);
+    setEditPressPhoto(null);
+  };
+
+  const handleDeletePressPhoto = async (id) => {
+    if (window.confirm("Delete this press photo?")) {
+      await deleteDoc(doc(db, 'press_photos', id));
+    }
   };
 
   const handleTmdbSync = async () => {
@@ -253,13 +286,21 @@ const Admin = () => {
         <Grid item xs={12} md={5}>
           <Paper sx={{ p: 4, borderRadius: 6 }}>
             <Typography variant="h5" sx={{ fontWeight: 800, mb: 4 }}>Site Configuration</Typography>
-            <form onSubmit={handleSaveConfig}>
+            {configLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <form onSubmit={handleSaveConfig}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField fullWidth label="Display Name" name="displayName" defaultValue={config?.displayName} />
                 </Grid>
                 <Grid item xs={12}>
                   <TextField fullWidth label="Tagline" name="tagline" defaultValue={config?.tagline} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Hero Image URL" name="heroImage" defaultValue={config?.heroImage || '/assets/hero_bja.png'} />
                 </Grid>
                 <Grid item xs={12}>
                   <TextField fullWidth multiline rows={3} label="Bio" name="bio" defaultValue={config?.bio} />
@@ -274,6 +315,9 @@ const Admin = () => {
                   <TextField fullWidth label="Letterboxd URL" name="letterboxdUrl" defaultValue={config?.letterboxdUrl} />
                 </Grid>
                 <Grid item xs={12}>
+                  <TextField fullWidth label="Bio PDF Download URL" name="bioPdfUrl" defaultValue={config?.bioPdfUrl} placeholder="Link to a PDF in Google Drive or Firebase Storage" />
+                </Grid>
+                <Grid item xs={12}>
                    <TextField fullWidth label="Featured Video Embed URL" name="featuredVideo" defaultValue={config?.featuredVideo} />
                 </Grid>
                 <Grid item xs={12}>
@@ -283,10 +327,31 @@ const Admin = () => {
                    </TextField>
                 </Grid>
                 <Grid item xs={12}>
+                  <FormControlLabel 
+                    control={<Switch name="brianBotEnabled" defaultChecked={config?.brianBotEnabled !== false} />} 
+                    label="Enable BrianBot AI 🤖" 
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="caption" sx={{ ml: 1, mb: 1, display: 'block' }}>Theme Color</Typography>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <input 
+                      type="color" 
+                      name="themeColor" 
+                      defaultValue={config?.themeColor || '#FF1493'}
+                      style={{ width: 60, height: 40, border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }} 
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      Pick a primary brand color
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12}>
                   <Button fullWidth variant="contained" type="submit" startIcon={<Save />}>Save Config</Button>
                 </Grid>
               </Grid>
             </form>
+            )}
           </Paper>
 
           {/* TMDb Sync Tool */}
@@ -435,6 +500,43 @@ const Admin = () => {
               </TableBody>
             </Table>
           </Paper>
+
+          {/* Press Kit Management */}
+          <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>Manage Press Kit Gallery</Typography>
+              <Button variant="contained" color="secondary" startIcon={<Plus />} onClick={() => { setEditPressPhoto({}); setOpenPressDialog(true); }}>Add Photo</Button>
+            </Box>
+            
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>URL</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pressPhotos.map((photo) => (
+                  <TableRow key={photo.id}>
+                    <TableCell sx={{ fontWeight: 600 }}>{photo.name}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{photo.url}</TableCell>
+                    <TableCell align="right">
+                      <IconButton onClick={() => { setEditPressPhoto(photo); setOpenPressDialog(true); }}><Edit size={18} /></IconButton>
+                      <IconButton color="error" onClick={() => handleDeletePressPhoto(photo.id)}><Trash2 size={18} /></IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {pressPhotos.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                      No press photos added yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
         </Grid>
       </Grid>
 
@@ -491,6 +593,29 @@ const Admin = () => {
           <DialogActions sx={{ p: 3 }}>
             <Button onClick={() => setOpenVideoDialog(false)}>Cancel</Button>
             <Button variant="contained" color="secondary" type="submit">Save Video</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      {/* Edit/Add Press Photo Dialog */}
+      <Dialog open={openPressDialog} onClose={() => setOpenPressDialog(false)} fullWidth maxWidth="sm">
+        <form onSubmit={handleSavePressPhoto}>
+          <DialogTitle>{editPressPhoto?.id ? 'Edit Press Photo' : 'Add New Press Photo'}</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Photo Name/Description" name="name" defaultValue={editPressPhoto?.name} required />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Image URL" name="url" defaultValue={editPressPhoto?.url} placeholder="e.g. https://.../image.jpg" required />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth type="number" label="Display Priority" name="priority" defaultValue={editPressPhoto?.priority || 0} />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setOpenPressDialog(false)}>Cancel</Button>
+            <Button variant="contained" color="secondary" type="submit">Save Photo</Button>
           </DialogActions>
         </form>
       </Dialog>
