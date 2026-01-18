@@ -2,44 +2,37 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 
+export const DEFAULT_CONFIG = {
+  displayName: "Brian Jordan Alvarez",
+  tagline: "Hello, it is me BJA. Welcome to my web-palace.",
+  heroImage: "/assets/hero_bja.png",
+  bio: "Creator of The Gay and Wondrous Life of Caleb Gallo, English Teacher, and more.",
+  shopMode: "link",
+  shopUrl: "https://bjastore.com",
+  cameoUrl: "https://www.cameo.com/brianjordanalvarez",
+  letterboxdUrl: "https://letterboxd.com/actor/brian-jordan-alvarez/",
+  featuredVideo: "https://www.youtube.com/embed/RtHC29merkU?si", // FX's English Teacher Trailer
+  brianBotEnabled: true,
+  themeColor: '#FF1493'
+};
+
 // Singleton for site config
 export const useSiteConfig = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'config', 'site'), (doc) => {
-      if (doc.exists()) {
-        setData(doc.data());
+    const unsubscribe = onSnapshot(doc(db, 'config', 'site'), (snapshot) => {
+      if (snapshot.exists()) {
+        setData({ ...DEFAULT_CONFIG, ...snapshot.data() });
       } else {
-        // Fallback defaults if doc doesn't exist
-        setData({
-          displayName: "Brian Jordan Alvarez",
-          tagline: "Hello, it is me BJA. Welcome to my web-palace.",
-          heroImage: "/assets/hero_bja.png",
-          bio: "Creator of The Gay and Wondrous Life of Caleb Gallo, English Teacher, and more.",
-          shopMode: "link",
-          shopUrl: "https://bjastore.com",
-          cameoUrl: "https://www.cameo.com/brianjordanalvarez",
-          letterboxdUrl: "https://letterboxd.com/actor/brian-jordan-alvarez/",
-          featuredVideo: "https://www.youtube.com/embed/RtHC29merkU?si" // FX's English Teacher Trailer
-        });
+        setData(DEFAULT_CONFIG);
       }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching site config:", error);
-      // Even on error, stop loading so we can show UI/fallbacks
+      setData(DEFAULT_CONFIG);
       setLoading(false);
-      setData({
-        displayName: "Brian Jordan Alvarez",
-        tagline: "Hello, it is me BJA. Welcome to my web-palace.",
-        bio: "Just a guy doing his best to keep the energy high and the camp level higher.",
-        shopMode: "link",
-        shopUrl: "https://bjastore.com",
-        cameoUrl: "https://www.cameo.com/brianjordanalvarez",
-        letterboxdUrl: "https://letterboxd.com/actor/brian-jordan-alvarez/",
-        featuredVideo: "https://www.youtube.com/embed/RtHC29merkU?si" // FX's English Teacher Trailer
-      });
     });
 
     return unsubscribe;

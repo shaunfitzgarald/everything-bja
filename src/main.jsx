@@ -5,21 +5,21 @@ import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
-import theme from './theme/theme';
+import DynamicThemeProvider from './components/DynamicThemeProvider';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <HelmetProvider>
-      <ThemeProvider theme={theme}>
+      <DynamicThemeProvider>
         <CssBaseline />
         <AuthProvider>
           <BrowserRouter>
             <App />
           </BrowserRouter>
         </AuthProvider>
-      </ThemeProvider>
+      </DynamicThemeProvider>
     </HelmetProvider>
   </React.StrictMode>
 );
