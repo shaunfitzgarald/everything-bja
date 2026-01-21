@@ -13,7 +13,10 @@ const DynamicThemeProvider = ({ children }) => {
     if (!primaryColor || typeof primaryColor !== 'string' || !primaryColor.startsWith('#')) {
       primaryColor = '#FF1493'; // Fallback to Deep Pink
     }
-    return createAppTheme({ primaryColor });
+    const secondaryColor = config?.secondaryColor || '#8A2BE2';
+    const enableGradient = config?.enableGradient === true;
+
+    return createAppTheme({ primaryColor, secondaryColor, enableGradient });
   }, [config]);
 
   if (loading) {

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFirestoreCollection, useSiteConfig, DEFAULT_CONFIG } from '../hooks/useFirestore';
 import { db } from '../firebase/config';
 import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { LogIn, Plus, Edit, Trash2, Save, RefreshCw } from 'lucide-react';
 import { fetchTmdbCredits } from '../services/tmdb.service';
 
@@ -34,6 +35,7 @@ const Admin = () => {
   const [openChatDialog, setOpenChatDialog] = useState(false);
   const [chatSummary, setChatSummary] = useState('');
   const [summarizing, setSummarizing] = useState(false);
+  const [uploadingBio, setUploadingBio] = useState(false);
   const [editPressPhoto, setEditPressPhoto] = useState(null);
   const [openCharacterDialog, setOpenCharacterDialog] = useState(false);
   const [editCharacter, setEditCharacter] = useState(null);
@@ -175,6 +177,26 @@ const Admin = () => {
   const handleSaveConfig = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    
+    let bioPdfUrl = formData.get('bioPdfUrl');
+    const bioFile = formData.get('bioFile');
+
+    if (bioFile && bioFile.size > 0) {
+      setUploadingBio(true);
+      try {
+        const storage = getStorage();
+        const storageRef = ref(storage, `bio/bio_doc_${Date.now()}_${bioFile.name}`);
+        const snapshot = await uploadBytes(storageRef, bioFile);
+        bioPdfUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Bio upload failed:", error);
+        alert("Failed to upload bio file.");
+        setUploadingBio(false);
+        return;
+      }
+      setUploadingBio(false);
+    }
+
     const newConfig = {
       displayName: formData.get('displayName'),
       tagline: formData.get('tagline'),
@@ -185,9 +207,12 @@ const Admin = () => {
       featuredVideo: formData.get('featuredVideo'),
       shopMode: formData.get('shopMode'),
       brianBotEnabled: formData.get('brianBotEnabled') === 'on',
+      enableGradient: formData.get('enableGradient') === 'on',
       themeColor: formData.get('themeColor'),
+      secondaryColor: formData.get('secondaryColor'),
       heroImage: formData.get('heroImage') || DEFAULT_CONFIG.heroImage,
-      bioPdfUrl: formData.get('bioPdfUrl')
+      heroImage: formData.get('heroImage') || DEFAULT_CONFIG.heroImage,
+      bioPdfUrl: bioPdfUrl
     };
     
     // Use setDoc with merge: true to create the document if it doesn't exist
@@ -414,7 +439,23 @@ const Admin = () => {
                   <TextField fullWidth label="Letterboxd URL" name="letterboxdUrl" defaultValue={config?.letterboxdUrl} />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Bio PDF Download URL" name="bioPdfUrl" defaultValue={config?.bioPdfUrl} placeholder="Link to a PDF in Google Drive or Firebase Storage" />
+                  <Box sx={{ mb: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Bio Document (PDF/Doc)</Typography>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <TextField
+                        fullWidth
+                        label="Download URL"
+                        name="bioPdfUrl"
+                        defaultValue={config?.bioPdfUrl}
+                        size="small"
+                        helperText="Use the upload button or paste a link manually"
+                      />
+                      <Button variant="outlined" component="label" disabled={uploadingBio} sx={{ height: 40, whiteSpace: 'nowrap' }}>
+                        {uploadingBio ? <CircularProgress size={20} /> : 'Upload File'}
+                        <input type="file" name="bioFile" hidden accept=".pdf,.doc,.docx,.txt,.md" />
+                      </Button>
+                    </Box>
+                  </Box>
                 </Grid>
                 <Grid item xs={12}>
                    <TextField fullWidth label="Featured Video Embed URL" name="featuredVideo" defaultValue={config?.featuredVideo} />
@@ -432,17 +473,34 @@ const Admin = () => {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="caption" sx={{ ml: 1, mb: 1, display: 'block' }}>Theme Color</Typography>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <input 
-                      type="color" 
-                      name="themeColor" 
-                      defaultValue={config?.themeColor || '#FF1493'}
-                      style={{ width: 60, height: 40, border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }} 
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>Theme Customization</Typography>
+                    
+                    <Box sx={{ display: 'flex', gap: 4, mb: 2, flexWrap: 'wrap' }}>
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Primary Color</Typography>
+                        <input 
+                          type="color" 
+                          name="themeColor" 
+                          defaultValue={config?.themeColor || '#FF1493'}
+                          style={{ width: 60, height: 40, border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }} 
+                        />
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Secondary Color</Typography>
+                        <input 
+                          type="color" 
+                          name="secondaryColor" 
+                          defaultValue={config?.secondaryColor || '#8A2BE2'}
+                          style={{ width: 60, height: 40, border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }} 
+                        />
+                      </Box>
+                    </Box>
+
+                    <FormControlLabel 
+                      control={<Switch name="enableGradient" defaultChecked={config?.enableGradient === true} />} 
+                      label="Enable Gradient Buttons 🌈" 
                     />
-                    <Typography variant="body2" color="text.secondary">
-                      Pick a primary brand color
-                    </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12}>
