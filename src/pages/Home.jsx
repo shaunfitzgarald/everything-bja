@@ -4,6 +4,7 @@ import SEOManager from '../components/SEOManager';
 import SectionHeader from '../components/SectionHeader';
 import FeaturedBanner from '../components/FeaturedBanner';
 import LinkCard from '../components/LinkCard';
+import CharacterGallery from '../components/CharacterGallery';
 import { useSiteConfig, useFirestoreCollection } from '../hooks/useFirestore';
 import { Instagram, Youtube, Twitter, ShoppingBag, Clapperboard } from 'lucide-react';
 
@@ -114,7 +115,7 @@ const Home = () => {
                 <Box sx={{ position: 'relative', pt: '56.25%', borderRadius: 4, overflow: 'hidden' }}>
                   <iframe
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                    src={config.featuredVideo}
+                    src={config.featuredVideo?.replace('youtube.com', 'youtube-nocookie.com').replace('youtu.be', 'youtube-nocookie.com/embed')}
                     title="Featured Video"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -128,6 +129,9 @@ const Home = () => {
             </Box>
           </Grid>
         </Grid>
+
+        {/* Dynamic Character Gallery */}
+        <CharacterGallery />
       </Container>
     </Box>
   );
