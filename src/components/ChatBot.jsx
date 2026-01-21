@@ -13,6 +13,8 @@ import {
 import { MessageCircle, Send, X } from 'lucide-react';
 
 import { useSiteConfig } from '../hooks/useFirestore';
+import { db } from '../firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const ChatBot = () => {
   const { data: config } = useSiteConfig();
@@ -24,6 +26,7 @@ const ChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const scrollRef = useRef(null);
+  const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -40,6 +43,22 @@ const ChatBot = () => {
     setMessage('');
     setIsLoading(true);
     setStreamingText('');
+
+    const consent = localStorage.getItem('bja_privacy_consent');
+
+    // Persist User Message only if accepted
+    if (consent === 'accepted') {
+      try {
+        await addDoc(collection(db, 'conversations'), {
+          sessionId: sessionIdRef.current,
+          role: 'user',
+          text: currentMessage,
+          timestamp: serverTimestamp()
+        });
+      } catch (e) {
+        console.error("Error logging user message:", e);
+      }
+    }
 
     try {
       // Use the newly added rewrite
@@ -75,6 +94,20 @@ const ChatBot = () => {
 
       setChatHistory(prev => [...prev, { role: 'model', text: accumulatedText }]);
       setStreamingText('');
+
+      // Persist Model Message only if accepted
+      if (consent === 'accepted') {
+        try {
+          await addDoc(collection(db, 'conversations'), {
+            sessionId: sessionIdRef.current,
+            role: 'model',
+            text: accumulatedText,
+            timestamp: serverTimestamp()
+          });
+        } catch (e) {
+          console.error("Error logging model message:", e);
+        }
+      }
     } catch (error) {
       console.error("Chat Error:", error);
       setChatHistory(prev => [...prev, { 

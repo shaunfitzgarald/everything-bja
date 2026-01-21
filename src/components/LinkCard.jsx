@@ -1,7 +1,8 @@
-import { Card, CardActionArea, CardContent, Typography, Box, Avatar } from '@mui/material';
 import { ExternalLink } from 'lucide-react';
+import { useAnalytics } from '../hooks/useAnalytics';
 
-const LinkCard = ({ title, url, icon, category, isFeatured }) => {
+const LinkCard = ({ id, title, url, icon, category, isFeatured }) => {
+  const { trackClick } = useAnalytics();
   return (
     <Card 
       sx={{ 
@@ -16,7 +17,11 @@ const LinkCard = ({ title, url, icon, category, isFeatured }) => {
         }
       }}
     >
-      <CardActionArea href={url} target="_blank">
+      <CardActionArea 
+        href={url} 
+        target="_blank"
+        onClick={() => trackClick(id || title, 'essentials', title)}
+      >
         <CardContent sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
           <Avatar sx={{ bgcolor: isFeatured ? 'primary.main' : 'secondary.main', mr: 2 }}>
             {icon || title[0]}

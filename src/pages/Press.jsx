@@ -4,10 +4,12 @@ import SectionHeader from '../components/SectionHeader';
 import { Download, Mail } from 'lucide-react';
 
 import { useSiteConfig, useFirestoreCollection } from '../hooks/useFirestore';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Press = () => {
   const { data: config, loading: configLoading } = useSiteConfig();
   const { data: photos, loading: photosLoading } = useFirestoreCollection('press_photos');
+  const { trackClick } = useAnalytics();
 
   const biography = config?.bio || "Brian Jordan Alvarez is an actor, writer, and director based in Los Angeles. Known for his viral characters and sketches, Brian has built a massive following by blending high-energy performance with relatable, campy humor.";
 
@@ -21,7 +23,13 @@ const Press = () => {
         <Typography variant="body1" sx={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
           {biography}
         </Typography>
-        <Button variant="outlined" sx={{ mt: 2 }} href={config?.bioPdfUrl || "#"} target="_blank">
+        <Button 
+          variant="outlined" 
+          sx={{ mt: 2 }} 
+          href={config?.bioPdfUrl || "#"} 
+          target="_blank"
+          onClick={() => trackClick('bio_pdf_download', 'press', 'Bio PDF Download')}
+        >
           Download Full Bio (PDF)
         </Button>
       </Paper>
@@ -61,6 +69,7 @@ const Press = () => {
                 href={photo.url}
                 target="_blank"
                 download
+                onClick={() => trackClick(photo.id || photo.url, 'press', photo.name || 'Press Photo High Res')}
                 startIcon={<Download size={18} />}
                 sx={{ borderRadius: 4, fontWeight: 700 }}
               >

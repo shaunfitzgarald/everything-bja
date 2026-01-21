@@ -15,7 +15,10 @@ const Admin = () => {
   const { data: videos, loading: videosLoading } = useFirestoreCollection('videos');
   const { data: credits, loading: creditsLoading } = useFirestoreCollection('credits');
   const { data: pressPhotos, loading: pressPhotosLoading } = useFirestoreCollection('press_photos');
+  const { data: characters, loading: charactersLoading } = useFirestoreCollection('characters');
   const { data: config, loading: configLoading } = useSiteConfig();
+  const { data: conversations, loading: convsLoading } = useFirestoreCollection('conversations', 'timestamp');
+  const { data: stats, loading: statsLoading } = useFirestoreCollection('analytics_stats', 'clickCount');
 
   const [editLink, setEditLink] = useState(null);
   const [openLinkDialog, setOpenLinkDialog] = useState(false);
@@ -27,7 +30,13 @@ const Admin = () => {
   const [tmdbId, setTmdbId] = useState('1071699'); // Default for BJA on TMDb
   const [tmdbKey, setTmdbKey] = useState('');
   const [openPressDialog, setOpenPressDialog] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [openChatDialog, setOpenChatDialog] = useState(false);
+  const [chatSummary, setChatSummary] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
   const [editPressPhoto, setEditPressPhoto] = useState(null);
+  const [openCharacterDialog, setOpenCharacterDialog] = useState(false);
+  const [editCharacter, setEditCharacter] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
   if (authLoading) return <Container sx={{ py: 10 }}><Typography>Loading auth...</Typography></Container>;
@@ -207,6 +216,96 @@ const Admin = () => {
   const handleDeletePressPhoto = async (id) => {
     if (window.confirm("Delete this press photo?")) {
       await deleteDoc(doc(db, 'press_photos', id));
+    }
+  };
+
+  const handleSaveCharacter = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData(e.target);
+      const charData = {
+        name: formData.get('name'),
+        image: formData.get('image'),
+        blurb: formData.get('blurb'),
+        priority: parseInt(formData.get('priority')) || 0
+      };
+
+      if (editCharacter?.id) {
+        await updateDoc(doc(db, 'characters', editCharacter.id), charData);
+      } else {
+        await addDoc(collection(db, 'characters'), charData);
+      }
+      setOpenCharacterDialog(false);
+      setEditCharacter(null);
+      alert("Character saved successfully!");
+    } catch (error) {
+      console.error("Error saving character:", error);
+      alert("Failed to save character: " + error.message);
+    }
+  };
+
+  const handleDeleteCharacter = async (id) => {
+    if (window.confirm("Delete this character? This will remove them from the homepage lineup.")) {
+      await deleteDoc(doc(db, 'characters', id));
+    }
+  };
+
+  const groupedConversations = conversations.reduce((acc, msg) => {
+    if (!acc[msg.sessionId]) {
+      acc[msg.sessionId] = {
+        sessionId: msg.sessionId,
+        messages: [],
+        timestamp: msg.timestamp,
+        preview: ''
+      };
+    }
+    acc[msg.sessionId].messages.push(msg);
+    if (msg.role === 'user' && !acc[msg.sessionId].preview) {
+      acc[msg.sessionId].preview = msg.text;
+    }
+    if (msg.timestamp?.seconds > (acc[msg.sessionId].timestamp?.seconds || 0)) {
+       acc[msg.sessionId].timestamp = msg.timestamp;
+    }
+    return acc;
+  }, {});
+
+  const sortedSessions = Object.values(groupedConversations).sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+  const handleSummarizeChats = async () => {
+    if (conversations.length === 0) return;
+    setSummarizing(true);
+    try {
+      // Aggregate last 100 messages for a broad overview
+      const recentMessages = conversations
+        .sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
+        .slice(0, 100)
+        .map(m => `${m.role.toUpperCase()}: ${m.text}`)
+        .join('\n');
+
+      const prompt = `You are a high-level analytics assistant. I will provide a log of user conversations with an AI version of Brian Jordan Alvarez. Your goal is to provide a concise, high-energy summary (in Brian's voice) of what people are generally asking about, what characters they love, and any common themes or "vibes" you notice. Keep it professional but "BJA-style".\n\nCONVERSATION LOG:\n${recentMessages}`;
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { message: prompt, history: [] } }),
+      });
+
+      if (!response.ok) throw new Error('Summary failed');
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value);
+        setChatSummary(text);
+      }
+    } catch (e) {
+      console.error("Summary error:", e);
+      alert("Could not generate summary. Check console.");
+    } finally {
+      setSummarizing(false);
     }
   };
 
@@ -501,6 +600,43 @@ const Admin = () => {
             </Table>
           </Paper>
 
+          {/* Character Management */}
+          <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>Manage The Lineup (Characters)</Typography>
+              <Button variant="contained" color="secondary" startIcon={<Plus />} onClick={() => { setEditCharacter({}); setOpenCharacterDialog(true); }}>Add Character</Button>
+            </Box>
+            
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Blurb</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[...characters].sort((a,b) => (b.priority || 0) - (a.priority || 0)).map((char) => (
+                  <TableRow key={char.id}>
+                    <TableCell sx={{ fontWeight: 600 }}>{char.name}</TableCell>
+                    <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{char.blurb}</TableCell>
+                    <TableCell align="right">
+                      <IconButton onClick={() => { setEditCharacter(char); setOpenCharacterDialog(true); }}><Edit size={18} /></IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteCharacter(char.id)}><Trash2 size={18} /></IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {characters.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                      No characters added yet. Jazz up the homepage!
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+
           {/* Press Kit Management */}
           <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -532,6 +668,94 @@ const Admin = () => {
                     <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
                       No press photos added yet.
                     </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+
+          {/* Site Statistics Overview */}
+          <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, mb: 4 }}>Site Statistics (Click Tracking)</Typography>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Item</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell align="right">Total Clicks</TableCell>
+                  <TableCell align="right">Last Interaction</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stats.sort((a,b) => (b.clickCount || 0) - (a.clickCount || 0)).map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell sx={{ fontWeight: 600 }}>{s.label || s.itemId}</TableCell>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>{s.category}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>{s.clickCount || 0}</TableCell>
+                    <TableCell align="right">
+                      {s.lastClicked?.toDate ? s.lastClicked.toDate().toLocaleString() : 'Just now'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {stats.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>No click data yet. Clicks are tracked once users interact.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+
+          {/* BrianBot Conversations Log */}
+          <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>BrianBot Conversations Log</Typography>
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                onClick={handleSummarizeChats} 
+                disabled={summarizing || conversations.length === 0}
+                startIcon={summarizing ? <CircularProgress size={18} /> : <Save size={18} />}
+              >
+                {summarizing ? 'Analyzing...' : 'Summarize Themes with AI'}
+              </Button>
+            </Box>
+
+            {chatSummary && (
+              <Box sx={{ mb: 4, p: 3, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 4 }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>AI Vibe Check Summary:</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{chatSummary}</Typography>
+                <Button size="small" sx={{ mt: 2, color: 'inherit' }} onClick={() => setChatSummary('')}>Clear Summary</Button>
+              </Box>
+            )}
+
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Session ID</TableCell>
+                  <TableCell>Last Message</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedSessions.map((session) => (
+                  <TableRow key={session.sessionId}>
+                    <TableCell>{session.timestamp?.toDate ? session.timestamp.toDate().toLocaleString() : 'Ongoing'}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{session.sessionId.substring(0, 15)}...</TableCell>
+                    <TableCell sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {session.preview}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button size="small" variant="outlined" onClick={() => { setSelectedSession(session); setOpenChatDialog(true); }}>
+                        View Transcript
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {sortedSessions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>No conversations recorded yet. Ensure users have "Accepted All" cookies.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -618,6 +842,73 @@ const Admin = () => {
             <Button variant="contained" color="secondary" type="submit">Save Photo</Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Edit/Add Character Dialog */}
+      <Dialog open={openCharacterDialog} onClose={() => setOpenCharacterDialog(false)} fullWidth maxWidth="sm">
+        <form onSubmit={handleSaveCharacter}>
+          <DialogTitle>{editCharacter?.id ? 'Edit Character' : 'Add New Character'}</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Character Name" name="name" defaultValue={editCharacter?.name} required />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Image URL" name="image" defaultValue={editCharacter?.image} placeholder="High-quality photo URL" required />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth multiline rows={4} label="Blurb / Description" name="blurb" defaultValue={editCharacter?.blurb} required />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth type="number" label="Display Priority" name="priority" defaultValue={editCharacter?.priority || 0} />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setOpenCharacterDialog(false)}>Cancel</Button>
+            <Button variant="contained" color="secondary" type="submit">Save Character</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* View Conversation Dialog */}
+      <Dialog open={openChatDialog} onClose={() => setOpenChatDialog(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Conversation Transcript
+          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{selectedSession?.sessionId}</Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: '#f9f9f9', py: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {selectedSession?.messages.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)).map((msg, idx) => (
+              <Box 
+                key={idx} 
+                sx={{ 
+                  alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%'
+                }}
+              >
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+                  {msg.role === 'user' ? 'User' : 'BrianBot'} • {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString() : ''}
+                </Typography>
+                <Paper 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 4, 
+                    bgcolor: msg.role === 'user' ? 'primary.main' : 'white',
+                    color: msg.role === 'user' ? 'white' : 'text.primary',
+                    border: msg.role === 'model' ? '1px solid' : 'none',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
+                </Paper>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenChatDialog(false)} variant="contained">Close</Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

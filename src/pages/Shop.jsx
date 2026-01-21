@@ -3,9 +3,11 @@ import SEOManager from '../components/SEOManager';
 import SectionHeader from '../components/SectionHeader';
 import { useSiteConfig } from '../hooks/useFirestore';
 import { ShoppingBag } from 'lucide-react';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Shop = () => {
   const { data: config, loading } = useSiteConfig();
+  const { trackClick } = useAnalytics();
 
   if (loading) return (
     <Container maxWidth="lg" sx={{ py: 10 }}>
@@ -58,6 +60,7 @@ const Shop = () => {
                  variant="contained" 
                  href={shopUrl} 
                  target="_blank"
+                 onClick={() => trackClick('shop_redirect', 'shop', 'Shop Redirect Button')}
                  startIcon={<ShoppingBag />}
                  sx={{ 
                    borderRadius: 100, 
@@ -84,11 +87,12 @@ const Shop = () => {
              <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
                We're taking you to the official BJA store.
              </Typography>
-             <Button 
-               variant="contained" 
-               size="large" 
-               href={shopUrl} 
-               target="_blank"
+              <Button 
+                variant="contained" 
+                size="large" 
+                href={shopUrl} 
+                target="_blank"
+                onClick={() => trackClick('shop_redirect_manual', 'shop', 'Shop Manual Button')}
                sx={{ borderRadius: 100, px: 8, py: 2, fontSize: '1.2rem' }}
              >
                Go to BJA Store

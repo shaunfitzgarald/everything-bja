@@ -36,6 +36,33 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    match /press_photos/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /characters/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /conversations/{document=**} {
+      allow read: if isAdmin();
+      allow create: if true; // Let anyone start a chat session
+      allow update, delete: if isAdmin();
+    }
+
+    match /analytics_events/{document=**} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    match /analytics_stats/{document=**} {
+      allow read: if true; // Let everyone see stats if we want to show "Popular" badges
+      allow create, update, delete: if true; // Incrementing needs public access or a function
+    }
+    
     // Public write access for contact form
     match /contacts/{document=**} {
       allow create: if true;

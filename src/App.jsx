@@ -18,6 +18,7 @@ import NotFound from './pages/NotFound';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatBot from './components/ChatBot';
+import CookieConsent from './components/CookieConsent';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
       </Box>
       <Footer />
       <ChatBot />
+      <CookieConsent />
     </Box>
   );
 }
