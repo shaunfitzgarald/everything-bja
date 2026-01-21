@@ -3,6 +3,8 @@ import { createTheme } from '@mui/material/styles';
 export const createAppTheme = (options = {}) => {
   const {
     primaryColor = '#FF1493', // Default: Deep Pink
+    secondaryColor = '#8A2BE2', // Default: Blue Violet
+    enableGradient = false, // Default: Solid Color
   } = options;
 
   return createTheme({
@@ -59,9 +61,34 @@ export const createAppTheme = (options = {}) => {
           root: {
             borderRadius: 100,
             padding: '10px 24px',
+            textTransform: 'none',
+            fontWeight: 600,
+          },
+          contained: {
             boxShadow: 'none',
+            background: enableGradient 
+              ? `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` 
+              : primaryColor,
+            color: '#fff',
             '&:hover': {
-              boxShadow: `0 4px 12px ${primaryColor}33`, // Dynamic shadow color (approx 20% opacity)
+              boxShadow: `0 4px 12px ${primaryColor}66`,
+              background: enableGradient 
+                ? `linear-gradient(45deg, ${primaryColor}, ${secondaryColor})` 
+                : undefined,
+              filter: enableGradient ? 'brightness(1.1)' : 'none',
+            },
+          },
+          outlined: {
+            borderColor: primaryColor,
+            color: primaryColor,
+            '&:hover': {
+              borderColor: primaryColor,
+              backgroundColor: `${primaryColor}11`,
+            },
+          },
+          text: {
+            '&:hover': {
+              backgroundColor: `${primaryColor}11`,
             },
           },
         },
