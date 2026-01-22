@@ -104,14 +104,14 @@ const Social = () => {
               <SocialFeed type="instagram" url="https://www.instagram.com/brianjordanalvarez/" />
             </Box>
           </Grid>
-          <Grid size={12}>
+          {/* <Grid size={12}>
             <Box sx={{ width: '100%', maxWidth: '1000px', mx: 'auto' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Twitter color="#1DA1F2" size={20} /> X (Updates)
               </Typography>
               <SocialFeed type="twitter" url="https://x.com/brianjoralvarez" />
             </Box>
-          </Grid>
+          </Grid> */}
           <Grid size={12}>
             <Box sx={{ width: '100%', maxWidth: '1000px', mx: 'auto' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>

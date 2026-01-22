@@ -6,7 +6,7 @@ import { useFirestoreCollection, useSiteConfig, DEFAULT_CONFIG } from '../hooks/
 import { db } from '../firebase/config';
 import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { LogIn, Plus, Edit, Trash2, Save, RefreshCw } from 'lucide-react';
+import { LogIn, Plus, Edit, Trash2, Save, RefreshCw, Mail, Sparkles } from 'lucide-react';
 import { fetchTmdbCredits } from '../services/tmdb.service';
 
 const Admin = () => {
@@ -20,9 +20,11 @@ const Admin = () => {
   const { data: config, loading: configLoading } = useSiteConfig();
   const { data: conversations, loading: convsLoading } = useFirestoreCollection('conversations', 'timestamp');
   const { data: stats, loading: statsLoading } = useFirestoreCollection('analytics_stats', 'clickCount');
+  const { data: contacts, loading: contactsLoading } = useFirestoreCollection('contacts', 'createdAt');
 
   const [editLink, setEditLink] = useState(null);
   const [openLinkDialog, setOpenLinkDialog] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [editVideo, setEditVideo] = useState(null);
   const [openVideoDialog, setOpenVideoDialog] = useState(false);
   const [email, setEmail] = useState('');
@@ -211,7 +213,6 @@ const Admin = () => {
       themeColor: formData.get('themeColor'),
       secondaryColor: formData.get('secondaryColor'),
       heroImage: formData.get('heroImage') || DEFAULT_CONFIG.heroImage,
-      heroImage: formData.get('heroImage') || DEFAULT_CONFIG.heroImage,
       bioPdfUrl: bioPdfUrl
     };
     
@@ -268,6 +269,7 @@ const Admin = () => {
       alert("Failed to save character: " + error.message);
     }
   };
+
 
   const handleDeleteCharacter = async (id) => {
     if (window.confirm("Delete this character? This will remove them from the homepage lineup.")) {
@@ -397,6 +399,55 @@ const Admin = () => {
     await logout();
     navigate('/');
   };
+
+  const handleAnalyzeInbox = async () => {
+    setAnalyzing(true);
+    try {
+      const messagesToAnalyze = contacts.slice(0, 20).map(c => ({
+        id: c.id,
+        subject: c.subject,
+        message: c.message
+      }));
+
+      if (messagesToAnalyze.length === 0) {
+        alert("No messages to analyze!");
+        setAnalyzing(false);
+        return;
+      }
+
+      const response = await fetch('/api/analyzeInbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messagesToAnalyze }),
+      });
+
+      if (!response.ok) throw new Error('Analysis failed');
+      const { data } = await response.json();
+      
+      const batch = writeBatch(db);
+      data.forEach(item => {
+        if (item.id && item.summary) {
+          const docRef = doc(db, 'contacts', item.id);
+          batch.update(docRef, {
+            aiSummary: item.summary,
+            priority: item.priority || 'Low',
+            aiReasoning: item.reasoning || 'No reasoning provided',
+            analyzedAt: new Date()
+          });
+        }
+      });
+      await batch.commit();
+
+    } catch (error) {
+      console.error("Error analyzing inbox:", error);
+      alert("Failed to analyze inbox. Check console.");
+    }
+    setAnalyzing(false);
+  };
+
+  // Filter contacts for UI
+  const highPriority = contacts.filter(c => c.priority === 'High');
+  const otherContacts = contacts.filter(c => c.priority !== 'High');
 
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>
@@ -814,6 +865,128 @@ const Admin = () => {
                 {sortedSessions.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} align="center" sx={{ py: 4 }}>No conversations recorded yet. Ensure users have "Accepted All" cookies.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+        </Grid>
+
+
+
+        {/* High Priority Inbox section */}
+        {highPriority.length > 0 && (
+          <Grid item xs={12}>
+             <Paper sx={{ p: 4, borderRadius: 6, mb: 4, bgcolor: '#fff5f5', border: '1px solid #ffcdd2' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#d32f2f', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  🔥 High Priority ({highPriority.length})
+                </Typography>
+              </Box>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>From</TableCell>
+                    <TableCell>AI Summary</TableCell>
+                    <TableCell align="right">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {highPriority.map((msg) => (
+                    <TableRow key={msg.id} hover sx={{ bgcolor: 'white' }}>
+                      <TableCell>{msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleDateString() : 'Just now'}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={700}>{msg.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{msg.email}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>{msg.aiSummary || msg.subject}</Typography>
+                        <Typography variant="caption" color="text.secondary">{msg.aiReasoning}</Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button 
+                          size="small" 
+                          variant="contained" 
+                          color="error"
+                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
+                        >
+                          Reply Urgent
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+             </Paper>
+          </Grid>
+        )}
+
+        {/* Contact Inbox */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 4, borderRadius: 6, minHeight: 400 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Mail /> Inbox ({otherContacts.length})
+              </Typography>
+              <Button 
+                variant="outlined" 
+                startIcon={analyzing ? <CircularProgress size={20} /> : <Sparkles size={20} />}
+                onClick={handleAnalyzeInbox}
+                disabled={analyzing}
+              >
+                {analyzing ? 'Analyzing...' : 'Analyze with AI'}
+              </Button>
+            </Box>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>From</TableCell>
+                  <TableCell>Subject/Summary</TableCell>
+                  <TableCell align="right">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {otherContacts.map((msg) => (
+                  <TableRow key={msg.id}>
+                    <TableCell>{msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleDateString() : 'Just now'}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={700}>{msg.name}</Typography>
+                    </TableCell>
+                    <TableCell>
+                       {/* Show Summary if exists, otherwise Subject and Preview */}
+                       {msg.aiSummary ? (
+                          <Box>
+                            <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>✨ {msg.aiSummary}</Typography>
+                            <Typography variant="caption" color="text.secondary">Priority: {msg.priority || 'Low'}</Typography>
+                          </Box>
+                       ) : (
+                          <Box>
+                            <Typography variant="body2">{msg.subject}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {msg.message}
+                            </Typography>
+                          </Box>
+                       )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        color="primary"
+                        href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(`\n\n\n--- On ${msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleString() : 'Recent date'}, ${msg.name} wrote:\n> ${msg.message}`)}`}
+                      >
+                        Reply
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {otherContacts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                      <Typography color="text.secondary">No standard messages.</Typography>
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>

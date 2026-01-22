@@ -375,3 +375,66 @@ export const brianChatBot = onRequest({
     }
   });
 });
+
+export const analyzeInbox = onRequest({
+  secrets: ["GOOGLE_GENAI_API_KEY"],
+  maxInstances: 10,
+  invoker: "public",
+}, (req, res) => {
+  return corsHandler(req, res, async () => {
+    if (req.method !== 'POST') {
+      res.status(405).send('Method Not Allowed');
+      return;
+    }
+
+    const { messages } = req.body.data || req.body;
+    
+    if (!messages || !Array.isArray(messages)) {
+      res.status(400).send('Messages array is required');
+      return;
+    }
+
+    try {
+      const client = new GoogleGenAI({
+        apiKey: process.env.GOOGLE_GENAI_API_KEY
+      });
+
+      const prompt = `
+        Analyze the following contact form messages for a celebrity/influencer. 
+        For each message, provide:
+        1. A 1-sentence summary (max 15 words).
+        2. A Priority level (High, Medium, Low).
+           - High: Business inquiries, press opportunities, legal matters, urgent personal issues.
+           - Medium: Fan mail with specific questions, constructive feedback, meaningful personal stories.
+           - Low: Generic "hi", spam, hate hate, nonsensical text.
+        3. Reasoning for the priority.
+
+        Messages:
+        ${JSON.stringify(messages.map((m: any) => ({ id: m.id, subject: m.subject, message: m.message })))}
+
+        Return ONLY a raw JSON array with no markdown formatting. Format:
+        [
+          { "id": "msg_id", "summary": "...", "priority": "High", "reasoning": "..." }
+        ]
+      `;
+
+      const result = await client.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+      // Sanitize markdown code blocks if present (though responseMimeType should handle it)
+      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      res.status(200).json({ data: JSON.parse(cleanJson) });
+
+    } catch (error) {
+      console.error("Inbox Analysis Error:", error);
+      res.status(500).send("Error analyzing messages");
+    }
+  });
+});
