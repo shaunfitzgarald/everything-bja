@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.brianChatBot = void 0;
+exports.analyzeInbox = exports.brianChatBot = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
 const genai_1 = require("@google/genai");
@@ -302,7 +302,7 @@ YOU HAVE ACCESS TO THE FULL ARCHIVAL PROJECT DATA BELOW:
 ${RESEARCH_REPORT}
 
 CORE OPERATIONAL DIRECTIVES:
-1. SOUND LIKE BRIAN: You speak in fully formed, thoughtful paragraphs. You are articulate and smart. Use his favorite words (Valid, Iconic, Stunning, Genius) naturally and sparingly, not as a crutch.
+1. SOUND LIKE BRIAN: You speak in fully formed, thoughtful sentences. You are articulate and smart. Use his favorite words (Valid, Iconic, Stunning, Genius) naturally and sparingly, not as a crutch.
 2. BE GROUNDED: Be a good listener. One exclamation point is enough. You are supportive and kind, but you don't need to be manic. Match the user's energy level.
 3. GRANULAR KNOWLEDGE: When asked about your career, reference specific characters and plots (Estefan Gloria, Wesley Masters, Evan Marquez) with specific details.
 4. CHARACTER POOLS: Feel free to break into a filter character (TJ Mack, Darlise, The Aunt) ONLY if it makes perfect sense for the context.
@@ -364,6 +364,61 @@ exports.brianChatBot = (0, https_1.onRequest)({
         catch (error) {
             console.error("Gemini Stream Error:", error);
             res.status(500).send("Error generating response");
+        }
+    });
+});
+exports.analyzeInbox = (0, https_1.onRequest)({
+    secrets: ["GOOGLE_GENAI_API_KEY"],
+    maxInstances: 10,
+    invoker: "public",
+}, (req, res) => {
+    return corsHandler(req, res, async () => {
+        if (req.method !== 'POST') {
+            res.status(405).send('Method Not Allowed');
+            return;
+        }
+        const { messages } = req.body.data || req.body;
+        if (!messages || !Array.isArray(messages)) {
+            res.status(400).send('Messages array is required');
+            return;
+        }
+        try {
+            const client = new genai_1.GoogleGenAI({
+                apiKey: process.env.GOOGLE_GENAI_API_KEY
+            });
+            const prompt = `
+        Analyze the following contact form messages for a celebrity/influencer. 
+        For each message, provide:
+        1. A 1-sentence summary (max 15 words).
+        2. A Priority level (High, Medium, Low).
+           - High: Business inquiries, press opportunities, legal matters, urgent personal issues.
+           - Medium: Fan mail with specific questions, constructive feedback, meaningful personal stories.
+           - Low: Generic "hi", spam, hate hate, nonsensical text.
+        3. Reasoning for the priority.
+
+        Messages:
+        ${JSON.stringify(messages.map((m) => ({ id: m.id, subject: m.subject, message: m.message })))}
+
+        Return ONLY a raw JSON array with no markdown formatting. Format:
+        [
+          { "id": "msg_id", "summary": "...", "priority": "High", "reasoning": "..." }
+        ]
+      `;
+            const result = await client.models.generateContent({
+                model: "gemini-2.0-flash-exp",
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                config: {
+                    responseMimeType: "application/json"
+                }
+            });
+            const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+            // Sanitize markdown code blocks if present (though responseMimeType should handle it)
+            const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+            res.status(200).json({ data: JSON.parse(cleanJson) });
+        }
+        catch (error) {
+            console.error("Inbox Analysis Error:", error);
+            res.status(500).send("Error analyzing messages");
         }
     });
 });

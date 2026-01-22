@@ -67,9 +67,11 @@ const SocialFeed = ({ type, url }) => {
   if (type === 'twitter') {
     return (
       <Box sx={{ 
-        width: '100%', 
-        minHeight: 800, 
-        borderRadius: 8, 
+        width: 'fit-content', 
+        minWidth: '350px',
+        maxWidth: '100%',
+        mx: 'auto',
+        borderRadius: '12px', 
         bgcolor: '#ffffff',
         boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
         border: '1px solid', 
@@ -93,7 +95,7 @@ const SocialFeed = ({ type, url }) => {
           ref={twitterContainerRef}
           sx={{ 
             p: 1, 
-            height: 700, 
+            height: 600, 
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -112,29 +114,24 @@ const SocialFeed = ({ type, url }) => {
     const username = url.split('@')[1]?.split('/')[0] || 'brianjordanalvarez';
     return (
       <Box sx={{ 
-        width: '100%', 
-        minHeight: 800, 
+        width: 'fit-content',
+        maxWidth: '100%',
+        mx: 'auto',
         overflow: 'hidden', 
-        borderRadius: 8, 
+        borderRadius: '12px', // Slightly larger radius for the hug 
         bgcolor: '#ffffff',
         boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
         border: '1px solid', 
         borderColor: 'divider',
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        pt: { xs: 2, sm: 6 }
+        justifyContent: 'center',
+        p: 1 // Minimal padding
       }}>
         <Box sx={{ 
-          width: '100%', 
-          maxWidth: '650px', 
-          transform: { xs: 'scale(1)', sm: 'scale(1.15)' },
-          transformOrigin: 'top center',
-          mb: 4,
+          width: '325px', // Fixed width for standard TikTok profile card
+          // The embed script will fill this width
           '& .tiktok-embed': {
-            margin: '0 auto !important',
-            border: 'none !important',
-            boxShadow: 'none !important'
+            margin: '0 !important',
           }
         }}>
           <blockquote 
@@ -156,27 +153,28 @@ const SocialFeed = ({ type, url }) => {
   if (type === 'instagram') {
     return (
       <Box sx={{ 
-        width: '100%', 
-        minHeight: 800, 
-        overflow: 'hidden', 
-        borderRadius: 8, 
+        width: 'fit-content',
+        maxWidth: '100%',
+        mx: 'auto',
+        borderRadius: '12px', 
         bgcolor: '#ffffff',
         boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
         border: '1px solid', 
         borderColor: 'divider',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        overflow: 'hidden'
       }}>
         <iframe
           src={`${url}embed`}
-          width="100%"
-          height="800"
+          width="400"
+          height="600"
           frameBorder="0"
           scrolling="no"
           allowtransparency="true"
           title="Instagram Feed"
-          style={{ border: 'none' }}
+          style={{ border: 'none', maxWidth: '100%' }}
         />
       </Box>
     );
@@ -185,9 +183,11 @@ const SocialFeed = ({ type, url }) => {
   if (type === 'youtube') {
     return (
       <Box sx={{ 
-        width: '100%', 
-        minHeight: 800, 
-        borderRadius: 8, 
+        width: '100%',
+        maxWidth: '800px', // Max width for video player
+        aspectRatio: '16/9', // Force video aspect ratio container
+        mx: 'auto',
+        borderRadius: '12px', 
         bgcolor: '#ffffff',
         boxShadow: '0 20px 60px rgba(0,0,0,0.1)', 
         border: '1px solid', 
@@ -196,21 +196,19 @@ const SocialFeed = ({ type, url }) => {
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {/* Profile Header */}
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#FF0000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-            <Youtube size={24} />
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0,0,0,0.02)' }}>
+          <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: '#FF0000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+            <Youtube size={18} />
           </Box>
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>Brian Jordan Alvarez</Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>@BrianJordanAlvarez • YouTube Profile</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>YouTube Channel</Typography>
           </Box>
         </Box>
 
         <iframe
           src={`${url}`}
           width="100%"
-          height="700"
+          height="100%"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
