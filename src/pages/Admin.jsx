@@ -6,7 +6,7 @@ import { useFirestoreCollection, useSiteConfig, DEFAULT_CONFIG } from '../hooks/
 import { db } from '../firebase/config';
 import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { LogIn, Plus, Edit, Trash2, Save, RefreshCw, Mail, Sparkles } from 'lucide-react';
+import { LogIn, Plus, Edit, Trash2, Save, RefreshCw, Mail, Sparkles, GripVertical, Image as ImageIcon, ArrowUpDown, Eye } from 'lucide-react';
 import { fetchTmdbCredits } from '../services/tmdb.service';
 
 const Admin = () => {
@@ -41,7 +41,16 @@ const Admin = () => {
   const [editPressPhoto, setEditPressPhoto] = useState(null);
   const [openCharacterDialog, setOpenCharacterDialog] = useState(false);
   const [editCharacter, setEditCharacter] = useState(null);
+
   const [syncing, setSyncing] = useState(false);
+  
+  // Credit State
+  const [openCreditDialog, setOpenCreditDialog] = useState(false);
+  const [editCredit, setEditCredit] = useState(null);
+  const [uploadingCreditImg, setUploadingCreditImg] = useState(false);
+  const [draggedCredit, setDraggedCredit] = useState(null);
+  const [openMessageDialog, setOpenMessageDialog] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   if (authLoading) return <Container sx={{ py: 10 }}><Typography>Loading auth...</Typography></Container>;
 
@@ -174,6 +183,105 @@ const Admin = () => {
     if (window.confirm("Delete this credit?")) {
       await deleteDoc(doc(db, 'credits', id));
     }
+  };
+
+  const handleSaveCredit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    let imageUrl = formData.get('currentImage');
+    const imageFile = formData.get('imageFile');
+
+    if (imageFile && imageFile.size > 0) {
+      setUploadingCreditImg(true);
+      try {
+        const storage = getStorage();
+        const storageRef = ref(storage, `credits/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Credit image upload failed:", error);
+        alert("Failed to upload image.");
+        setUploadingCreditImg(false);
+        return;
+      }
+      setUploadingCreditImg(false);
+    }
+
+    const creditData = {
+      showName: formData.get('showName'),
+      role: formData.get('role'),
+      year: formData.get('year'),
+      mediaType: formData.get('mediaType'), // 'movie', 'tv', 'stage'
+      tmdbUrl: formData.get('tmdbUrl'),
+      image: imageUrl,
+      priority: parseInt(formData.get('priority')) || 0
+    };
+
+    if (editCredit?.id) {
+      await updateDoc(doc(db, 'credits', editCredit.id), creditData);
+    } else {
+      // Default priority to top? or bottom? Let's use 0 or max.
+      await addDoc(collection(db, 'credits'), creditData);
+    }
+    setOpenCreditDialog(false);
+    setEditCredit(null);
+  };
+
+  const handleAutoSortCredits = async () => {
+    if (!window.confirm("This will overwrite custom order with strict Chronological (Year Descending) order. Continue?")) return;
+    
+    const sorted = [...credits].sort((a, b) => {
+      const yearA = parseInt(a.year) || 0;
+      const yearB = parseInt(b.year) || 0;
+      if (yearB !== yearA) return yearB - yearA;
+      return a.showName.localeCompare(b.showName);
+    });
+
+    const batch = writeBatch(db);
+    sorted.forEach((cre, index) => {
+      batch.update(doc(db, 'credits', cre.id), { priority: index });
+    });
+    
+    await batch.commit();
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e, index) => {
+    setDraggedCredit(index);
+    e.dataTransfer.effectAllowed = "move";
+    // Transparent ghost image if desired, but default is usually fine
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedCredit === null || draggedCredit === dropIndex) return;
+
+    // Reorder local array first for visual feedback (though Firestore hook will sync eventually)
+    // We actually need to update Priorities in Firestore.
+    // To minimize writes, we might need a smart strategy, but let's just reassign all priorities in the new order.
+    // Sort items by current priority first to ensure we have the correct list state
+    const sortedCredits = [...credits].sort((a, b) => (a.priority || 0) - (b.priority || 0));
+    
+    const item = sortedCredits[draggedCredit];
+    const newItems = [...sortedCredits];
+    newItems.splice(draggedCredit, 1);
+    newItems.splice(dropIndex, 0, item);
+
+    const batch = writeBatch(db);
+    newItems.forEach((cre, idx) => {
+      // Only update if priority changed
+      if (cre.priority !== idx) {
+        batch.update(doc(db, 'credits', cre.id), { priority: idx });
+      }
+    });
+
+    setDraggedCredit(null);
+    await batch.commit();
   };
 
   const handleSaveConfig = async (e) => {
@@ -360,7 +468,7 @@ const Admin = () => {
           tmdbUrl: item.media_type === 'movie' 
             ? `https://www.themoviedb.org/movie/${item.id}` 
             : `https://www.themoviedb.org/tv/${item.id}`,
-          priority: 0 
+          priority: 0 // Will need re-sorting later
         }));
 
         // Robust sort by year desc
@@ -604,6 +712,16 @@ const Admin = () => {
               </Grid>
             </Grid>
           </Paper>
+
+
+          <Paper sx={{ p: 4, borderRadius: 6, mt: 4, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>⚠️ Important Note</Typography>
+            <Typography variant="body2">
+              Using <b>TMDb Sync</b> (above) will DELETE all existing credits and replace them. 
+              If you have manually added credits or reduced the list, syncing will undo that valid work.
+              Use the manual "Manage Acting Credits" section for fine-tuning.
+            </Typography>
+          </Paper>
         </Grid>
 
         {/* Links Management */}
@@ -674,34 +792,73 @@ const Admin = () => {
           {/* Credits Management */}
           <Paper sx={{ p: 4, borderRadius: 6, mt: 6 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>Manage Acting Credits</Typography>
-              <Typography variant="body2" color="text.secondary">Synced or manually added</Typography>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 800 }}>Manage Acting Credits</Typography>
+                <Typography variant="body2" color="text.secondary">Drag to reorder • Earliest at top of list = 1st on site?</Typography>
+                <Typography variant="caption" color="text.secondary">Current Order: Priority 0 (Top) → Priority N (Bottom)</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="outlined" startIcon={<ArrowUpDown />} onClick={handleAutoSortCredits}>
+                  Auto-Sort (Year)
+                </Button>
+                <Button variant="contained" color="secondary" startIcon={<Plus />} onClick={() => { setEditCredit({}); setOpenCreditDialog(true); }}>
+                  Add Credit
+                </Button>
+              </Box>
             </Box>
             
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell width={50}></TableCell>
+                  <TableCell width={80}>Image</TableCell>
                   <TableCell>Project</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Year</TableCell>
+                  <TableCell width={80}>Priority</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {credits.map((credit) => (
-                  <TableRow key={credit.id}>
-                    <TableCell sx={{ fontWeight: 600 }}>{credit.showName}</TableCell>
-                    <TableCell>{credit.role}</TableCell>
-                    <TableCell>{credit.year}</TableCell>
-                    <TableCell align="right">
-                      <IconButton color="error" onClick={() => handleDeleteCredit(credit.id)}><Trash2 size={18} /></IconButton>
-                    </TableCell>
-                  </TableRow>
+                {[...credits]
+                  .sort((a, b) => (a.priority || 0) - (b.priority || 0))
+                  .map((credit, index) => (
+                    <TableRow 
+                      key={credit.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDrop={(e) => handleDrop(e, index)}
+                      sx={{ 
+                        cursor: 'move',
+                        opacity: draggedCredit === index ? 0.5 : 1,
+                        bgcolor: draggedCredit === index ? 'action.hover' : 'inherit',
+                        '&:hover': { bgcolor: 'action.hover' },
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <TableCell><GripVertical size={20} style={{ opacity: 0.5 }} /></TableCell>
+                      <TableCell>
+                        <Box 
+                          component="img" 
+                          src={credit.image || 'https://placehold.co/100x150?text=No+Img'} 
+                          sx={{ width: 40, height: 60, objectFit: 'cover', borderRadius: 1, bgcolor: 'grey.200' }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{credit.showName}</TableCell>
+                      <TableCell>{credit.role}</TableCell>
+                      <TableCell>{credit.year}</TableCell>
+                      <TableCell>{credit.priority}</TableCell>
+                      <TableCell align="right">
+                        <IconButton onClick={() => { setEditCredit(credit); setOpenCreditDialog(true); }}><Edit size={18} /></IconButton>
+                        <IconButton color="error" onClick={() => handleDeleteCredit(credit.id)}><Trash2 size={18} /></IconButton>
+                      </TableCell>
+                    </TableRow>
                 ))}
                 {credits.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                      No credits found. Try syncing from TMDb!
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      No credits found. Sync from TMDb or add Manually!
                     </TableCell>
                   </TableRow>
                 )}
@@ -905,14 +1062,24 @@ const Admin = () => {
                         <Typography variant="caption" color="text.secondary">{msg.aiReasoning}</Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Button 
-                          size="small" 
-                          variant="contained" 
-                          color="error"
-                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
-                        >
-                          Reply Urgent
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                          <Button 
+                            size="small"
+                            variant="outlined"
+                            onClick={() => { setSelectedMessage(msg); setOpenMessageDialog(true); }}
+                            startIcon={<Eye size={16} />}
+                          >
+                            View
+                          </Button>
+                          <Button 
+                            size="small" 
+                            variant="contained" 
+                            color="error"
+                            href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
+                          >
+                            Reply
+                          </Button>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -971,14 +1138,24 @@ const Admin = () => {
                        )}
                     </TableCell>
                     <TableCell align="right">
-                      <Button 
-                        size="small" 
-                        variant="contained" 
-                        color="primary"
-                        href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(`\n\n\n--- On ${msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleString() : 'Recent date'}, ${msg.name} wrote:\n> ${msg.message}`)}`}
-                      >
-                        Reply
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          onClick={() => { setSelectedMessage(msg); setOpenMessageDialog(true); }}
+                          startIcon={<Eye size={16} />}
+                        >
+                          View
+                        </Button>
+                        <Button 
+                          size="small" 
+                          variant="contained" 
+                          color="primary"
+                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(`\n\n\n--- On ${msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleString() : 'Recent date'}, ${msg.name} wrote:\n> ${msg.message}`)}`}
+                        >
+                          Reply
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1141,6 +1318,104 @@ const Admin = () => {
           <Button onClick={() => setOpenChatDialog(false)} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={openCreditDialog} onClose={() => setOpenCreditDialog(false)} maxWidth="sm" fullWidth>
+        <form onSubmit={handleSaveCredit}>
+          <DialogTitle>{editCredit?.id ? 'Edit Credit' : 'New Credit'}</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField fullWidth required label="Show / Movie Name" name="showName" defaultValue={editCredit?.showName} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Role" name="role" defaultValue={editCredit?.role} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Year" name="year" defaultValue={editCredit?.year} placeholder="YYYY" />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth select SelectProps={{ native: true }} label="Media Type" name="mediaType" defaultValue={editCredit?.mediaType || 'tv'}>
+                  <option value="movie">Movie</option>
+                  <option value="tv">TV Show</option>
+                  <option value="stage">Stage / Theater</option>
+                  <option value="web">Web Series</option>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Link (IMDb/TMDb)" name="tmdbUrl" defaultValue={editCredit?.tmdbUrl} />
+              </Grid>
+              
+              <input type="hidden" name="currentImage" value={editCredit?.image || ''} />
+              <input type="hidden" name="priority" value={editCredit?.priority ?? credits.length} />
+
+              <Grid item xs={12}>
+                <Box sx={{ p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default' }}>
+                   <Typography variant="subtitle2" gutterBottom>Poster Image</Typography>
+                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                     {editCredit?.image && (
+                       <Box component="img" src={editCredit.image} sx={{ width: 60, height: 90, objectFit: 'cover', borderRadius: 1 }} />
+                     )}
+                     <Box sx={{ flexGrow: 1 }}>
+                       <Button variant="outlined" component="label" fullWidth disabled={uploadingCreditImg}>
+                         {uploadingCreditImg ? <CircularProgress size={20} /> : 'Upload Wrapper/Poster'}
+                         <input type="file" name="imageFile" hidden accept="image/*" />
+                       </Button>
+                       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                         Leaves 'currentImage' if no file selected.
+                       </Typography>
+                     </Box>
+                   </Box>
+                </Box>
+              </Grid>
+
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenCreditDialog(false)}>Cancel</Button>
+            <Button variant="contained" type="submit" disabled={uploadingCreditImg}>Save Credit</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* View Message Dialog */}
+      <Dialog open={openMessageDialog} onClose={() => setOpenMessageDialog(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              {selectedMessage?.subject || 'No Subject'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              From: {selectedMessage?.name} ({selectedMessage?.email})
+            </Typography>
+          </Box>
+          <Typography variant="caption">
+            {selectedMessage?.createdAt?.toDate ? selectedMessage.createdAt.toDate().toLocaleString() : ''}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedMessage?.aiSummary && (
+             <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 2 }}>
+               <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>✨ AI Analysis</Typography>
+               <Typography variant="body2" sx={{ fontWeight: 600 }}>Summary: {selectedMessage.aiSummary}</Typography>
+               <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.9 }}>Reasoning: {selectedMessage.aiReasoning}</Typography>
+             </Box>
+          )}
+          
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+            {selectedMessage?.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenMessageDialog(false)}>Close</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<Mail />}
+            href={`mailto:${selectedMessage?.email}?subject=Re: ${encodeURIComponent(selectedMessage?.subject || '')}&body=${encodeURIComponent(`\n\n\n--- On ${selectedMessage?.createdAt?.toDate ? selectedMessage.createdAt.toDate().toLocaleString() : 'Recent date'}, ${selectedMessage?.name} wrote:\n> ${selectedMessage?.message}`)}`}
+          >
+            Reply via Email
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Container>
   );
 };

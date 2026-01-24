@@ -10,7 +10,8 @@ const Credits = () => {
   const credits = [...items].sort((a, b) => {
     const yearA = parseInt(a.year) || 0;
     const yearB = parseInt(b.year) || 0;
-    return yearB - yearA;
+    if (yearB !== yearA) return yearB - yearA;
+    return (a.priority || 0) - (b.priority || 0);
   });
 
   return (
